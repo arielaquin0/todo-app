@@ -1,0 +1,98 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: ./docker/nginx.Dockerfile
+    depends_on:
+      - php
+      - mysql
+      - redis
+    container_name: nginx
+    ports:
+      - 8880:80
+    volumes:
+      - ./backend:/var/www/html
+    networks:
+      - app-network
+
+  php:
+    build:
+      context: .
+      dockerfile: ./docker/php.Dockerfile
+    depends_on:
+      - redis
+    container_name: backend
+    volumes:
+      - ./backend:/var/www/html
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0.27
+    platform: linux/amd64
+    container_name: mysql_db
+    ports:
+      - 3306:3306
+    volumes:
+      - ./docker/mysql:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: todoappdb
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: secret
+      MYSQL_ROOT_PASSWORD: secret
+    networks:
+      - app-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - 6379:6379
+    volumes:
+      - ./docker/redis:/var/lib/redis
+    networks:
+      - app-network
+
+  composer:
+    image: composer:latest
+    container_name: backend_composer
+    volumes:
+      - ./backend:/var/www/html
+    working_dir: /var/www/html
+    command: composer install --ignore-platform-reqs
+    networks:
+      - app-network
+
+  artisan:
+    build:
+      context: .
+      dockerfile: ./docker/php.Dockerfile
+    container_name: backend_artisan
+    volumes:
+      - ./backend:/var/www/html
+    working_dir: /var/www/html
+    command: ["php-fpm"]
+    networks:
+      - app-network
+
+  node:
+    build:
+      context: .
+      dockerfile: ./docker/vue.Dockerfile
+    container_name: vue_frontend
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    working_dir: /var/www/frontend
+    volumes:
+      - ./frontend:/var/www/frontend
+      - node_modules:/var/www/frontend/node_modules
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  node_modules:
