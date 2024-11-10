@@ -1,6 +1,14 @@
 <template>
   <div class="q-pa-md">
-    <div class="row justify-end q-pb-sm">
+    <div class="row justify-between q-pb-sm">
+      <q-select
+          style="width: 300px"
+          outlined
+          v-model="statusFilter"
+          :options="['All', 'Completed', 'Pending']"
+          label="Filter by Status"
+          @update:model-value="fetchTasks"
+      />
       <q-btn push type="submit" label="Add Task" class="q-mt-md" color="primary" @click="openAddTaskDialog" />
     </div>
 
@@ -72,10 +80,11 @@ const columns = [
 export default {
   setup () {
     const $q = useQuasar()
+    const statusFilter = ref('All')
     const rows = ref([])
     const loading = ref(false)
     const pagination = ref({
-      sortBy: 'desc',
+      sortBy: 'updated_at',
       descending: false,
       page: 1,
       rowsPerPage: 10,
@@ -84,12 +93,17 @@ export default {
 
     function fetchTasks (props = {}) {
       loading.value = true
-      pagination.value.page = props?.pagination?.page || 1
-      pagination.value.rowsPerPage = props?.pagination?.rowsPerPage || 10
 
-      const { page, rowsPerPage } = pagination.value
+      // Destructure pagination with default values
+      const { page = 1, rowsPerPage = 10, sortBy = 'updated_at', descending = true } = props?.pagination || {};
 
-      useTaskStore().fetchTasks({ page, per_page: rowsPerPage })
+      // Set pagination values
+      pagination.value = { page, rowsPerPage, sortBy, descending };
+
+      // Condense status handling
+      const status = statusFilter.value !== 'All' ? statusFilter.value : null;
+
+      useTaskStore().fetchTasks({ ...pagination.value, status })
         .then(response => {
           pagination.value.rowsNumber = response.total
           rows.value = response.data
@@ -179,6 +193,7 @@ export default {
 
     return {
       columns,
+      statusFilter,
       rows,
       loading,
       pagination,

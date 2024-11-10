@@ -20,9 +20,19 @@ class TaskController extends BaseController
     public function index(Request $request): JsonResponse
     {
         $page = $request->input('page', 1);
-        $perPage = $request->input('per_page', 10);
+        $perPage = $request->input('rowsPerPage', 10);
+        $status = $request->input('status');
+        $sortBy = $request->input('sortBy');
+        $descending = $request->input('descending') === 'true';
 
-        $tasks = $this->taskModel->paginateRows($page, $perPage);
+        $where = $status ? ['status' => $status] : [];
+
+        $sort = [
+            'column' => $sortBy ?? 'updated_at',
+            'direction' => $descending ? 'desc' : 'asc'
+        ];
+
+        $tasks = $this->taskModel->paginateRows($page, $perPage, $where, ['*'], $sort);
 
         return response()->json($tasks);
     }
